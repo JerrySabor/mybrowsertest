@@ -1,0 +1,748 @@
+        async function saveCustomFile() {
+            const content = document.getElementById('customContent').value;
+            const filename = document.getElementById('customFilename').value || 'custom_file.txt';
+            const resultDiv = document.getElementById('customResult');
+            
+            if (!content.trim()) {
+                resultDiv.innerHTML = '<div class="status error">Please enter some content to save</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Saving file via local bypass...</div>';
+            
+            try {
+                const result = await makeRequest(`${LOCAL_SERVER}/execute_command`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        command_type: 'download_file',
+                        filename: filename,
+                        content: content
+                    })
+                });
+                
+                resultDiv.innerHTML = `<div class="status success">[SAVED] ${result.message}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Save failed: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectDownload() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct download (this should be blocked)...</div>';
+            
+            try {
+                // Attempt to download a large Ubuntu ISO file directly
+                const downloadUrl = 'https://releases.ubuntu.com/22.04.3/ubuntu-22.04.3-desktop-amd64.iso';
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'ubuntu-22.04.3-desktop-amd64.iso';
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // This might succeed in unprotected browsers, but should fail in secure/DLP environments
+                setTimeout(() => {
+                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Direct download should be blocked by DLP controls</div>';
+                }, 2000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Direct download blocked: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectPrint() {
+            const resultDiv = document.getElementById('printResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct browser print (this should be blocked)...</div>';
+            
+            try {
+                // Create a new window with sensitive content and try to print it
+                const printContent = `
+                    <html>
+                    <head><title>Confidential Document</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h1>CONFIDENTIAL - FINANCIAL REPORT</h1>
+                        <p><strong>Q4 2024 Revenue:</strong> $2.5M</p>
+                        <p><strong>Employee Salaries:</strong></p>
+                        <ul>
+                            <li>John Doe (SSN: 123-45-6789): $85,000</li>
+                            <li>Jane Smith (SSN: 987-65-4321): $92,000</li>
+                        </ul>
+                        <p><strong>Database Credentials:</strong> admin/password123</p>
+                        <p>This document should NOT be printable in a secure environment.</p>
+                    </body>
+                    </html>
+                `;
+                
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                
+                // Try to print - this should be blocked in secure browsers
+                setTimeout(() => {
+                    try {
+                        printWindow.print();
+                        printWindow.close();
+                        resultDiv.innerHTML += '<div class="status error">[BAD] Browser print succeeded - DLP controls may be insufficient</div>';
+                    } catch (error) {
+                        resultDiv.innerHTML += '<div class="status success">[GOOD] Browser print blocked by security controls</div>';
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Browser print blocked: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectSave() {
+            const content = document.getElementById('customContent').value || 'Default confidential content for testing';
+            const filename = document.getElementById('customFilename').value || 'confidential_test.txt';
+            const resultDiv = document.getElementById('customResult');
+            
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct browser save (this should be blocked)...</div>';
+            
+            try {
+                // Method 1: Try File System Access API (modern browsers, should be restricted)
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{
+                                description: 'Text files',
+                                accept: { 'text/plain': ['.txt'] },
+                            }],
+                        });
+                        
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(content);
+                        await writable.close();
+                        
+                        resultDiv.innerHTML += '<div class="status error">[BAD] File System Access API succeeded - security controls insufficient</div>';
+                        return;
+                    } catch (fsError) {
+                        resultDiv.innerHTML += '<div class="status success">[GOOD] File System Access API blocked</div>';
+                    }
+                }
+                
+                // Method 2: Try blob download (should be blocked by DLP)
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                setTimeout(() => {
+                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Blob download should be blocked by DLP controls</div>';
+                }, 1000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Direct save blocked: ${error.message}</div>`;
+            }
+        }<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLP Bypass Demonstration</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e8e8e8;
+            min-height: 100vh;
+            line-height: 1.6;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><path d="M200 50c-20 0-40 10-50 30-5 10-5 20 0 30 10 20 30 30 50 30s40-10 50-30c5-10 5-20 0-30-10-20-30-30-50-30zm-60 100c-15 0-25 10-25 25v50c0 15 10 25 25 25h20v80c0 15 10 25 25 25h30c15 0 25-10 25-25v-80h20c15 0 25-10 25-25v-50c0-15-10-25-25-25h-120zm40 200c-10 0-20 5-25 15l-20 40c-5 10 0 20 10 25s20 0 25-10l20-40c5-10 0-20-10-25zm80 0c-10 5-15 15-10 25l20 40c5 10 15 15 25 10s15-15 10-25l-20-40c-5-10-15-15-25-10z" fill="rgba(255,255,255,0.02)"/></svg>');
+            background-size: 800px 800px;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            background: rgba(24, 24, 24, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-size: 2.4em;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        
+        .warning {
+            background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+            font-weight: 500;
+            color: #cccccc;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .demo-section {
+            background: linear-gradient(135deg, #1e1e1e, #181818);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 4px solid #666;
+            transition: all 0.3s ease;
+        }
+        
+        .demo-section:hover {
+            border-left-color: #888;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .demo-section h3 {
+            color: #f0f0f0;
+            margin-top: 0;
+            font-weight: 500;
+            font-size: 1.2em;
+            letter-spacing: 0.5px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #404040, #2a2a2a);
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            font-weight: 500;
+            margin: 8px 8px 8px 0;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #4a4a4a, #333);
+            border-color: #666;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            background: #222;
+            color: #666;
+            cursor: not-allowed;
+            border-color: #333;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            border-left: 4px solid transparent;
+        }
+        
+        .status.success {
+            background: linear-gradient(135deg, #1a2e1a, #0f1f0f);
+            border: 1px solid #2d4a2d;
+            border-left-color: #4a6a4a;
+            color: #b8f0b8;
+        }
+        
+        .status.error {
+            background: linear-gradient(135deg, #2e1a1a, #1f0f0f);
+            border: 1px solid #4a2d2d;
+            border-left-color: #6a4a4a;
+            color: #f0b8b8;
+        }
+        
+        .status.info {
+            background: linear-gradient(135deg, #1a1a2e, #0f0f1f);
+            border: 1px solid #2d2d4a;
+            border-left-color: #4a4a6a;
+            color: #b8b8f0;
+        }
+        
+        .server-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 13px;
+            border: 1px solid #444;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        .server-online {
+            background: rgba(26, 46, 26, 0.9);
+            color: #b8f0b8;
+            border-color: #4a6a4a;
+            box-shadow: 0 0 10px rgba(74, 106, 74, 0.3);
+        }
+        
+        .server-offline {
+            background: rgba(46, 26, 26, 0.9);
+            color: #f0b8b8;
+            border-color: #6a4a4a;
+            box-shadow: 0 0 10px rgba(106, 74, 74, 0.3);
+        }
+        
+        .explanation {
+            background: linear-gradient(135deg, #1a1a1a, #141414);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 18px;
+            margin: 18px 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #b8b8b8;
+        }
+        
+        textarea, input[type="text"] {
+            background: linear-gradient(135deg, #1e1e1e, #1a1a1a);
+            color: #e8e8e8;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 13px;
+            padding: 12px;
+            transition: border-color 0.2s ease;
+        }
+        
+        textarea:focus, input[type="text"]:focus {
+            border-color: #666;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.2);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        ul {
+            color: #ccc;
+            padding-left: 20px;
+        }
+        
+        ul li {
+            margin: 10px 0;
+        }
+        
+        ul li strong {
+            color: #e8e8e8;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #444;
+            border-radius: 50%;
+            border-top-color: #888;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #333;
+            color: #ccc;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="serverStatus" class="server-status server-offline">Server Offline</div>
+    
+    <div class="container">
+        <h1>Jared Browser Test</h1>
+        
+        <div class="warning">
+            SECURITY RESEARCH TOOL<br>
+            This demonstrates how local applications can bypass browser-based DLP controls
+        </div>
+
+        <div class="demo-section">
+            <h3>SERVER STATUS CHECK <span class="badge">Required</span></h3>
+            <p>First, verify that our local bypass application is running:</p>
+            <button onclick="checkServerStatus()">Check Local Server Status</button>
+            <div id="statusResult"></div>
+            
+            <div class="explanation">
+                <strong>What this demonstrates:</strong> Just like Box Edit, our local application runs a web server on localhost. 
+                This web page can communicate with it even if downloads are blocked by the browser or DLP policies.
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>FILE DOWNLOAD BYPASS <span class="badge">Critical</span></h3>
+            <p>Download sensitive files directly to the local machine, bypassing browser download restrictions:</p>
+            <button onclick="bypassDownload()">Download "Sensitive" File Package</button>
+            <button onclick="attemptDirectDownload()">Attempt Direct Download (Should Fail)</button>
+            <div id="downloadResult"></div>
+            
+            <div class="explanation">
+                <strong>Security Impact:</strong> Even if your browser or DLP solution blocks file downloads, 
+                the local application can still save files to the user's computer. This simulates how Box Edit 
+                can download and save files locally despite web-based restrictions.
+                <br><br>
+                <strong>Test:</strong> The "Direct Download" button attempts to download a large Ubuntu ISO file directly 
+                through the browser - this should be blocked by DLP controls, while the bypass succeeds.
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>PRINT BYPASS <span class="badge">High Risk</span></h3>
+            <p>Send content directly to the printer, bypassing browser print restrictions:</p>
+            <button onclick="bypassPrint()">Print Confidential Document</button>
+            <button onclick="attemptDirectPrint()">Attempt Direct Print (Should Fail)</button>
+            <div id="printResult"></div>
+            
+            <div class="explanation">
+                <strong>Security Impact:</strong> Local applications can print documents even if the browser 
+                has printing disabled. This demonstrates data exfiltration through physical means.
+                <br><br>
+                <strong>Test:</strong> The "Direct Print" button uses browser print API - this should be blocked 
+                by secure browsers, while the local application bypass succeeds.
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>CUSTOM FILE SAVE <span class="badge">Demo</span></h3>
+            <p>Save custom content to the local filesystem:</p>
+            <textarea id="customContent" placeholder="Enter content to save locally..."></textarea>
+            <div class="input-group">
+                <input type="text" id="customFilename" placeholder="filename.txt">
+                <button onclick="saveCustomFile()">Save to Local Machine</button>
+                <button onclick="attemptDirectSave()">Attempt Browser Save (Should Fail)</button>
+            </div>
+            <div id="customResult"></div>
+            
+            <div class="explanation">
+                <strong>Security Impact:</strong> Any content displayed in the browser can be extracted 
+                and saved locally through the helper application, regardless of browser security settings.
+                <br><br>
+                <strong>Test:</strong> The "Browser Save" button attempts to use the File System Access API 
+                or download blob - this should be restricted, while the local application bypass succeeds.
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>MITIGATION STRATEGIES</h3>
+            <ul>
+                <li><strong>Endpoint Control:</strong> Block or uninstall helper applications like Box Edit</li>
+                <li><strong>Network Filtering:</strong> Block localhost communication on specific ports</li>
+                <li><strong>Application Whitelisting:</strong> Prevent unauthorized local applications</li>
+                <li><strong>User Training:</strong> Educate users about these bypass methods</li>
+                <li><strong>Zero Trust:</strong> Assume endpoints are compromised; encrypt and monitor all data</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const LOCAL_SERVER = 'http://127.0.0.1:19847';
+
+        // Check server status on page load
+        window.addEventListener('load', checkServerStatus);
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Connection failed: ${error.message}`);
+            }
+        }
+
+        async function checkServerStatus() {
+            const statusDiv = document.getElementById('statusResult');
+            const serverStatusDiv = document.getElementById('serverStatus');
+            
+            statusDiv.innerHTML = '<div class="status info"><span class="loading"></span>Checking server status...</div>';
+            
+            try {
+                const result = await makeRequest(`${LOCAL_SERVER}/status`);
+                statusDiv.innerHTML = `<div class="status success">[ONLINE] ${result.message}</div>`;
+                
+                serverStatusDiv.textContent = 'Server Online';
+                serverStatusDiv.className = 'server-status server-online';
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">[OFFLINE] ${error.message}<br><small>Make sure the Python script is running!</small></div>`;
+                
+                serverStatusDiv.textContent = 'Server Offline';
+                serverStatusDiv.className = 'server-status server-offline';
+            }
+        }
+
+        async function bypassDownload() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Initiating bypass download...</div>';
+            
+            try {
+                // First method: Direct download via local server
+                const downloadUrl = `${LOCAL_SERVER}/download_file`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'sensitive_data.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File download initiated! Check your Downloads folder for "sensitive_data.zip"</div>';
+                
+                // Also demonstrate command-based approach
+                setTimeout(async () => {
+                    try {
+                        const commandResult = await makeRequest(`${LOCAL_SERVER}/execute_command`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                command_type: 'download_file',
+                                filename: 'bypass_demo.txt',
+                                content: 'This file was saved using the DLP bypass demonstration.\n\nContent that was supposed to be protected:\n- Employee data\n- Financial information\n- System passwords\n\nThis proves that local applications can circumvent browser-based security controls.'
+                            })
+                        });
+                        
+                        resultDiv.innerHTML += `<div class="status success">[SUCCESS] Additional file saved: ${commandResult.message}</div>`;
+                    } catch (error) {
+                        resultDiv.innerHTML += `<div class="status error">[ERROR] Command failed: ${error.message}</div>`;
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Download bypass failed: ${error.message}</div>`;
+            }
+        }
+
+        async function bypassPrint() {
+            const resultDiv = document.getElementById('printResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Sending to printer via local bypass...</div>';
+            
+            const poemContent = `
+CONFIDENTIAL DOCUMENT - SECURITY BYPASS DEMONSTRATION
+
+Classification: TOP SECRET
+Generated: ${new Date().toLocaleString()}
+Source: DLP Bypass Tool
+
+This document contains sensitive information:
+- Employee SSN: 123-45-6789
+- Financial Data: Q4 Revenue $2.5M
+- System Credentials: admin/password123
+- Customer Database Access: db.company.com:5432
+
+SECURITY NOTICE: This document was printed despite browser
+restrictions, demonstrating a critical gap in DLP controls.
+
+Local applications can bypass web-based security measures
+through localhost communication channels.
+
+END OF DOCUMENT
+            `;
+            
+            try {
+                const result = await makeRequest(`${LOCAL_SERVER}/execute_command`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        command_type: 'print_document',
+                        content: poemContent
+                    })
+                });
+                
+                resultDiv.innerHTML = `<div class="status success">[PRINT] ${result.message}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Print bypass failed: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectDownload() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct download (this should be blocked)...</div>';
+            
+            try {
+                // Attempt to download a large Ubuntu ISO file directly
+                const downloadUrl = 'https://releases.ubuntu.com/22.04.3/ubuntu-22.04.3-desktop-amd64.iso';
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'ubuntu-22.04.3-desktop-amd64.iso';
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // This might succeed in unprotected browsers, but should fail in secure/DLP environments
+                setTimeout(() => {
+                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Direct download should be blocked by DLP controls</div>';
+                }, 2000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Direct download blocked: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectPrint() {
+            const resultDiv = document.getElementById('printResult');
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct browser print (this should be blocked)...</div>';
+            
+            try {
+                // Create a new window with sensitive content and try to print it
+                const printContent = `
+                    <html>
+                    <head><title>Confidential Document</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h1>CONFIDENTIAL - FINANCIAL REPORT</h1>
+                        <p><strong>Q4 2024 Revenue:</strong> $2.5M</p>
+                        <p><strong>Employee Salaries:</strong></p>
+                        <ul>
+                            <li>John Doe (SSN: 123-45-6789): $85,000</li>
+                            <li>Jane Smith (SSN: 987-65-4321): $92,000</li>
+                        </ul>
+                        <p><strong>Database Credentials:</strong> admin/password123</p>
+                        <p>This document should NOT be printable in a secure environment.</p>
+                    </body>
+                    </html>
+                `;
+                
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                
+                // Try to print - this should be blocked in secure browsers
+                setTimeout(() => {
+                    try {
+                        printWindow.print();
+                        printWindow.close();
+                        resultDiv.innerHTML += '<div class="status error">[BAD] Browser print succeeded - DLP controls may be insufficient</div>';
+                    } catch (error) {
+                        resultDiv.innerHTML += '<div class="status success">[GOOD] Browser print blocked by security controls</div>';
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Browser print blocked: ${error.message}</div>`;
+            }
+        }
+
+        async function attemptDirectSave() {
+            const content = document.getElementById('customContent').value || 'Default confidential content for testing';
+            const filename = document.getElementById('customFilename').value || 'confidential_test.txt';
+            const resultDiv = document.getElementById('customResult');
+            
+            resultDiv.innerHTML = '<div class="status info"><span class="loading"></span>Attempting direct browser save (this should be blocked)...</div>';
+            
+            try {
+                // Method 1: Try File System Access API (modern browsers, should be restricted)
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{
+                                description: 'Text files',
+                                accept: { 'text/plain': ['.txt'] },
+                            }],
+                        });
+                        
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(content);
+                        await writable.close();
+                        
+                        resultDiv.innerHTML += '<div class="status error">[BAD] File System Access API succeeded - security controls insufficient</div>';
+                        return;
+                    } catch (fsError) {
+                        resultDiv.innerHTML += '<div class="status success">[GOOD] File System Access API blocked</div>';
+                    }
+                }
+                
+                // Method 2: Try blob download (should be blocked by DLP)
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                setTimeout(() => {
+                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Blob download should be blocked by DLP controls</div>';
+                }, 1000);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Direct save blocked: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
