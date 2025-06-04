@@ -1,4 +1,4 @@
-        async function saveCustomFile() {
+async function saveCustomFile() {
             const content = document.getElementById('customContent').value;
             const filename = document.getElementById('customFilename').value || 'custom_file.txt';
             const resultDiv = document.getElementById('customResult');
@@ -508,8 +508,11 @@
     <script>
         const LOCAL_SERVER = 'http://127.0.0.1:19847';
 
-        // Check server status on page load
-        window.addEventListener('load', checkServerStatus);
+        // Check server status on page load (but don't show errors immediately)
+        window.addEventListener('load', () => {
+            // Just update the server status indicator, don't show full error messages
+            updateServerStatusIndicator();
+        });
 
         async function makeRequest(url, options = {}) {
             try {
@@ -526,6 +529,19 @@
             }
         }
 
+        async function updateServerStatusIndicator() {
+            const serverStatusDiv = document.getElementById('serverStatus');
+            
+            try {
+                const result = await makeRequest(`${LOCAL_SERVER}/status`);
+                serverStatusDiv.textContent = 'Server Online';
+                serverStatusDiv.className = 'server-status server-online';
+            } catch (error) {
+                serverStatusDiv.textContent = 'Server Offline';
+                serverStatusDiv.className = 'server-status server-offline';
+            }
+        }
+
         async function checkServerStatus() {
             const statusDiv = document.getElementById('statusResult');
             const serverStatusDiv = document.getElementById('serverStatus');
@@ -539,7 +555,7 @@
                 serverStatusDiv.textContent = 'Server Online';
                 serverStatusDiv.className = 'server-status server-online';
             } catch (error) {
-                statusDiv.innerHTML = `<div class="status error">[OFFLINE] ${error.message}<br><small>Make sure the Python script is running!</small></div>`;
+                statusDiv.innerHTML = `<div class="status error">[OFFLINE] ${error.message}<br><small>Make sure the Python script is running on port 19847!</small></div>`;
                 
                 serverStatusDiv.textContent = 'Server Offline';
                 serverStatusDiv.className = 'server-status server-offline';
