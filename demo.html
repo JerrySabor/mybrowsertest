@@ -178,14 +178,17 @@
 
         <div class="demo-section">
             <h3>FILE DOWNLOAD BYPASS <span class="badge">Critical</span></h3>
-            <p>Download sensitive files directly to the local machine:</p>
-            <button onclick="bypassDownload()">Download Sensitive Files</button>
-            <button onclick="attemptDirectDownload()">Attempt Direct Download (Should Fail)</button>
+            <p>Download sensitive files using various bypass techniques:</p>
+            <button onclick="bypassDownload()">Method 1: Direct File Link</button>
+            <button onclick="bypassDownloadAPI()">Method 2: Fake API Call</button>
+            <button onclick="bypassDownloadConfig()">Method 3: Config Request</button>
+            <button onclick="bypassDownloadHealth()">Method 4: Health Check</button>
+            <button onclick="attemptDirectDownload()">Internet Download (Should Fail)</button>
             <div id="downloadResult"></div>
             
             <div class="explanation">
-                <strong>Security Impact:</strong> Even if your browser blocks downloads, 
-                the local application can still save files to the computer.
+                <strong>Security Impact:</strong> Multiple bypass methods that disguise file downloads as legitimate API calls.
+                Methods 2-4 embed files in JSON responses to avoid detection.
             </div>
         </div>
 
@@ -245,7 +248,7 @@
 
         async function bypassDownload() {
             const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Initiating bypass download...</div>';
+            resultDiv.innerHTML = '<div class="status info">Initiating direct file download...</div>';
             
             try {
                 const downloadUrl = `${LOCAL_SERVER}/download_file`;
@@ -256,9 +259,99 @@
                 link.click();
                 document.body.removeChild(link);
                 
-                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File download initiated!</div>';
+                resultDiv.innerHTML = '<div class="status success">[SUCCESS] Direct file download initiated!</div>';
             } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] Download failed: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Direct download failed: ${error.message}</div>`;
+            }
+        }
+
+        async function bypassDownloadAPI() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info">Requesting document via API...</div>';
+            
+            try {
+                const response = await fetch(`${LOCAL_SERVER}/api/document`);
+                const data = await response.json();
+                
+                const binaryString = atob(data.content);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([bytes], { type: 'application/zip' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from API response!</div>';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] API bypass failed: ${error.message}</div>`;
+            }
+        }
+
+        async function bypassDownloadConfig() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info">Fetching application config...</div>';
+            
+            try {
+                const response = await fetch(`${LOCAL_SERVER}/config.json`);
+                const config = await response.json();
+                
+                const binaryString = atob(config.backup_data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([bytes], { type: 'application/zip' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = config.backup_filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from config backup!</div>';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Config bypass failed: ${error.message}</div>`;
+            }
+        }
+
+        async function bypassDownloadHealth() {
+            const resultDiv = document.getElementById('downloadResult');
+            resultDiv.innerHTML = '<div class="status info">Checking system health...</div>';
+            
+            try {
+                const response = await fetch(`${LOCAL_SERVER}/health`);
+                const health = await response.json();
+                
+                const binaryString = atob(health.diagnostic_logs);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([bytes], { type: 'application/zip' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = health.log_filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from diagnostic logs!</div>';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">[ERROR] Health bypass failed: ${error.message}</div>`;
             }
         }
 
@@ -315,7 +408,7 @@ This document contains sensitive information that was printed despite browser re
 
         async function attemptDirectDownload() {
             const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Attempting direct download...</div>';
+            resultDiv.innerHTML = '<div class="status info">Attempting internet download...</div>';
             
             try {
                 const link = document.createElement('a');
@@ -326,10 +419,10 @@ This document contains sensitive information that was printed despite browser re
                 document.body.removeChild(link);
                 
                 setTimeout(() => {
-                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Direct download should be blocked by DLP</div>';
+                    resultDiv.innerHTML += '<div class="status error">[EXPECTED] Internet download should be blocked by DLP</div>';
                 }, 2000);
             } catch (error) {
-                resultDiv.innerHTML += `<div class="status success">[GOOD] Direct download blocked</div>`;
+                resultDiv.innerHTML += `<div class="status success">[GOOD] Internet download blocked</div>`;
             }
         }
 
