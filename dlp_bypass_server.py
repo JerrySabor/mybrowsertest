@@ -7,8 +7,15 @@ def send_error_response(self, message):
         error_data = {"status": "error", "message": message}
         self.wfile.write(json.dumps(error_data).encode())#!/usr/bin/env python3
 """
-DLP Bypass Proof of Concept - Local HTTP Server
-Demonstrates how local applications can circumvent browser-based security controls
+Garfield's DLP Bypass Server (garfield_server.py)
+Companion to: Felix's Security Test (felix_test.html)
+
+Like Garfield always finding clever ways to get his lasagna, this server demonstrates 
+how local applications can circumvent browser-based security controls and "feed" data 
+to users despite DLP restrictions!
+
+Created by Jared on June 4, 2025
+Security Research Tool for educational and testing purposes
 
 REQUIREMENTS:
 - Python 3.6+ (no additional packages required - uses only standard library)
@@ -27,12 +34,17 @@ No additional packages needed! This script uses only Python standard library mod
 - platform (built-in)
 
 USAGE:
-1. Save this file as: dlp_bypass_server.py
-2. Run: python dlp_bypass_server.py
-3. Open the HTML file in your browser
-4. Click buttons to test bypasses
+1. Save this file as: garfield_server.py
+2. Save the HTML companion as: felix_test.html
+3. Run: python garfield_server.py
+4. Open felix_test.html in your browser
+5. Use Felix's bag of tricks to test security bypasses!
 
 The server will run on http://127.0.0.1:19847
+
+Like Garfield's appetite, this server is always hungry for demonstrating security gaps!
+
+Author: Jared - June 4, 2025
 """
 
 import json
@@ -588,12 +600,14 @@ class DLPBypassHandler(BaseHTTPRequestHandler):
 def main():
     port = 19847  # Random high port to avoid conflicts
     
-    print("=" * 60)
-    print("DLP BYPASS PROOF OF CONCEPT")
-    print("=" * 60)
-    print(f"Starting local server on http://127.0.0.1:{port}")
-    print("This demonstrates how local applications can bypass browser security")
-    print("=" * 60)
+    print("=" * 65)
+    print("🐱 GARFIELD'S DLP BYPASS SERVER - ALWAYS HUNGRY FOR DATA! 🐱")
+    print("=" * 65)
+    print(f"Starting Garfield's server on http://127.0.0.1:{port}")
+    print("Companion to Felix's Security Test (felix_test.html)")
+    print("Like Garfield getting his lasagna, this bypasses browser security!")
+    print("Created by Jared on June 4, 2025")
+    print("=" * 65)
     
     try:
         server = HTTPServer(('127.0.0.1', port), DLPBypassHandler)
