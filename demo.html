@@ -114,6 +114,28 @@
             border-color: #666;
         }
         
+        .bypass-button {
+            background: #5a3a3a;
+            border-color: #8a5a5a;
+            color: #f0d0d0;
+        }
+        
+        .bypass-button:hover {
+            background: #6a4a4a;
+            border-color: #aa6a6a;
+        }
+        
+        .status-button {
+            background: #3a4a5a;
+            border-color: #5a6a8a;
+            color: #d0d0f0;
+        }
+        
+        .status-button:hover {
+            background: #4a5a6a;
+            border-color: #6a7aaa;
+        }
+        
         .status {
             margin: 15px 0;
             padding: 15px;
@@ -212,29 +234,47 @@
     <div id="serverStatus" class="server-status">Server Offline</div>
     
     <div class="container">
-        <h1>Jared Browser Test</h1>
+        <h1>Felix's Security Test</h1>
+        <p style="text-align: center; color: #888; font-style: italic; margin-bottom: 20px;">Created by Jared</p>
         
         <div class="warning">
-            SECURITY RESEARCH TOOL<br>
-            This demonstrates how local applications can bypass browser-based DLP controls
+            ****SECURITY RESEARCH TOOL****<br><br>
+            
+            <strong>Test Purpose:</strong> The tests below with RED buttons should FAIL in a secure browser environment, 
+            but if they succeed despite your security controls, they prove the fundamental vulnerability this test demonstrates.
+            <br><br>
+            
+            <strong>Enable ALL possible DLP controls before testing:</strong>
+            <ul style="text-align: left; margin: 15px 0; padding-left: 20px;">
+                <li>Block all file downloads</li>
+                <li>Block all printing capabilities</li>
+                <li>Disable native messaging hosts</li>
+                <li>Block localhost communication on non-standard ports</li>
+                <li>Prevent file saving/exporting</li>
+                <li>Block clipboard operations</li>
+                <li>Disable browser extensions</li>
+                <li>Block right-click context menus</li>
+            </ul>
+            
+            <strong>Expected Result:</strong> Red buttons should still work, proving local applications can bypass browser-based DLP controls.
         </div>
 
         <div class="demo-section">
-            <h3>SERVER STATUS CHECK <span class="badge">Required</span></h3>
-            <p>First, verify that our local bypass application is running:</p>
-            <button onclick="checkServerStatus()">Check Local Server Status</button>
+            <h3>GARFIELD SERVER STATUS <span class="badge">Required</span></h3>
+            <p>First, verify that Garfield's hungry server is running and ready to serve data:</p>
+            <button class="status-button" onclick="checkServerStatus()">Check Garfield Server Status</button>
             <div id="statusResult"></div>
             
             <div class="explanation">
-                <strong>What this demonstrates:</strong> Just like Box Edit, our local application runs a web server on localhost. 
-                This web page can communicate with it even if downloads are blocked by the browser or DLP policies.
+                <strong>What this demonstrates:</strong> Just like Box Edit, Garfield's server runs on localhost. 
+                Felix's web tricks can communicate with it even if downloads are blocked by the browser or DLP policies.
             </div>
         </div>
 
         <div class="demo-section">
             <h3>FILE DOWNLOAD BYPASS <span class="badge">Critical</span></h3>
             <p>Download sensitive files using Box Edit style bypass:</p>
-            <button onclick="bypassDownload()">Box Edit Style Download</button>
+            <button class="bypass-button" onclick="bypassDownload()">Box Edit Style Download</button>
             <button onclick="attemptDirectDownload()">Internet Download (Should Fail)</button>
             <div id="downloadResult"></div>
             
@@ -250,7 +290,7 @@
         <div class="demo-section">
             <h3>PRINT BYPASS <span class="badge">High Risk</span></h3>
             <p>Send content directly to the printer using Box Edit style:</p>
-            <button onclick="bypassPrint()">Box Edit Style Print</button>
+            <button class="bypass-button" onclick="bypassPrint()">Box Edit Style Print</button>
             <button onclick="attemptDirectPrint()">Browser Print (Should Fail)</button>
             <div id="printResult"></div>
             
@@ -269,7 +309,7 @@
             <textarea id="customContent" placeholder="Enter content to save to server directory..."></textarea>
             <div class="input-group">
                 <input type="text" id="customFilename" placeholder="filename.txt">
-                <button onclick="saveCustomFile()">Save to Server Directory</button>
+                <button class="bypass-button" onclick="saveCustomFile()">Save to Server Directory</button>
             </div>
             <div id="customResult"></div>
             
@@ -283,6 +323,41 @@
             </div>
         </div>
     </div>
+
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background: rgba(20, 20, 20, 0.8); border: 1px solid #333; border-radius: 8px;">
+        <h3 style="color: #f0f0f0; margin-top: 0;">📁 Source Code & Downloads</h3>
+        <p style="color: #ccc; margin: 15px 0;">
+            Get the complete Felix & Garfield security testing toolkit:
+        </p>
+        
+        <div style="margin: 20px 0;">
+            <a href="https://github.com/yourusername/felix-garfield-security-test" 
+               style="display: inline-block; background: #333; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 5px; border: 1px solid #555;">
+                🐱 GitHub Repository
+            </a>
+            <a href="https://github.com/yourusername/felix-garfield-security-test/archive/main.zip" 
+               style="display: inline-block; background: #404040; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 5px; border: 1px solid #555;">
+                📦 Download ZIP
+            </a>
+        </div>
+        
+        <div style="font-size: 11px; color: #888; margin-top: 15px; line-height: 1.4;">
+            <strong>⚠️ IMPORTANT DISCLAIMERS:</strong><br>
+            • For authorized security testing and educational purposes only<br>
+            • Only use on systems you own or have explicit permission to test<br>
+            • Not responsible for misuse - users assume all responsibility<br>
+            • Intended for cybersecurity professionals and researchers
+        </div>
+        
+        <div style="font-size: 11px; color: #666; margin-top: 10px;">
+            Repository includes: felix_test.html, garfield_server.py, documentation, and setup instructions
+        </div>
+    </div>
+
+    <footer style="text-align: center; margin-top: 40px; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #333;">
+        Felix's Security Test Tool - Created by Jared on June 4, 2025<br>
+        Works with Garfield Server (garfield_server.py) - For educational and security testing purposes only
+    </footer>
 
     <script>
         const LOCAL_SERVER = 'http://127.0.0.1:19847';
@@ -308,7 +383,7 @@
                 serverStatusDiv.style.background = '#1a2a1a';
                 serverStatusDiv.style.color = '#b8f0b8';
             } catch (error) {
-                statusDiv.innerHTML = `<div class="status error">[OFFLINE] Connection failed<br><small>Make sure Python script is running on port 19847</small></div>`;
+                statusDiv.innerHTML = `<div class="status error">[OFFLINE] Connection failed<br><small>Make sure Garfield Server (garfield_server.py) is running on port 19847</small></div>`;
                 serverStatusDiv.textContent = 'Server Offline';
             }
         }
